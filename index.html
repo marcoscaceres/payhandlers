@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="styles/style.css" />
+<body>
+  <h1>Simple Payment Handler</h1>
+  <script>
+    window.onload = async () => {
+      let reg;
+      try {
+        reg = await navigator.serviceWorker.register("sw.js");
+      } catch (err) {
+        console.error(err);
+        return;
+      }
+      if (!navigator.serviceWorker.controller) {
+        return;
+      }
+      if (reg.installing) {
+        trackInstallation(reg.installing);
+        return;
+      }
+      if (reg.waiting) {
+        updateReady(reg.waiting);
+        return;
+      }
+      reg.addEventListener("updatefound", () => {
+        trackInstallation(reg.installing);
+      });
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        window.location.reload();
+      });
+      function trackInstallation(sw) {
+        sw.addEventListener("statechange", () => {
+          switch (sw.state) {
+            case "installed":
+              updateReady(sw);
+              break;
+          }
+        });
+      }
+      function updateReady(sw) {
+        console.info("Update ready");
+        const toast = document.querySelector("#update-toast");
+        const refresh = document.querySelector("#refresh");
+        const dismiss = document.querySelector("#dismiss");
+        toast.classList.add("show");
+        dismiss.onclick = () => toast.classList.remove("show");
+        refresh.onclick = () => {
+          toast.classList.remove("show");
+          // Let SW know it can take over
+          sw.postMessage({
+            action: "skipWaiting",
+          });
+        };
+      }
+    };
+  </script>
+  <aside id="update-toast">
+    <p>
+      Site has been updated!
+      <button id="refresh">refresh?</button>
+      <button id="dismiss">No thanks!</button>
+    </p>
+  </aside>
+</body>
